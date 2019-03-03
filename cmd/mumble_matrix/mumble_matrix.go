@@ -54,8 +54,10 @@ func main() {
 		var sticker *matrix.Sticker
 
 		switch {
-		case c == mumble.Join && len(mum.Users) > 1:
+		// First join
+		case c == mumble.Join && len(mum.Users) == 2:
 			sticker = matrix.Stickers["welcome"]
+		// Command
 		case strings.HasPrefix(c, "!"):
 			sticker, _ = matrix.Stickers[c[1:]]
 		}
