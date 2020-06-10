@@ -2,10 +2,11 @@ package main
 
 import (
 	"flag"
-	"github.com/silkeh/mumble_bot/bot"
-	"layeh.com/gumble/gumble"
 	"log"
 	"strings"
+
+	"github.com/silkeh/mumble_bot/bot"
+	"layeh.com/gumble/gumble"
 )
 
 func handleUserChange(c *bot.Client, e *gumble.UserChangeEvent) {

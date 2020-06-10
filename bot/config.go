@@ -2,7 +2,7 @@ package bot
 
 import (
 	"github.com/silkeh/mumble_bot/matrix"
-	"github.com/tucnak/telebot"
+	"gopkg.in/tucnak/telebot.v2"
 	"gopkg.in/yaml.v2"
 	"os"
 )

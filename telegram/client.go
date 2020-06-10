@@ -4,7 +4,7 @@ import (
 	"log"
 	"time"
 
-	tb "github.com/tucnak/telebot"
+	tb "gopkg.in/tucnak/telebot.v2"
 )
 
 // Target is a telebot.Recipient that can be either a User or Chat.
