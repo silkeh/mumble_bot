@@ -10,25 +10,28 @@ import (
 // MumbleConfig represents configuration for a Mumble client.
 type MumbleConfig struct {
 	Server, User string
-	HoldMusic map[string]string `yaml:"hold_music"`
+	Music        struct {
+		Hold  map[string]string
+		Clips map[string]string
+	}
 }
 
 // TelegramConfig represents configuration for a Telegram client.
 type TelegramConfig struct {
 	Token, Target string
-	Stickers map[string]*telebot.Sticker
+	Stickers      map[string]*telebot.Sticker
 }
 
 // MatrixConfig represents configuration for a Matrix client.
 type MatrixConfig struct {
 	Server, User, Token, Room string
-	Stickers map[string]*matrix.Sticker
+	Stickers                  map[string]*matrix.Sticker
 }
 
 // Config represents configuration for a Client.
 type Config struct {
-	Mumble *MumbleConfig
-	Matrix *MatrixConfig
+	Mumble   *MumbleConfig
+	Matrix   *MatrixConfig
 	Telegram *TelegramConfig
 }
 
