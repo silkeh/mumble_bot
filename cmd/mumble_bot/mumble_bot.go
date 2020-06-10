@@ -3,7 +3,10 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/silkeh/mumble_bot/bot"
 	"layeh.com/gumble/gumble"
@@ -37,6 +40,24 @@ func handleTextMessage(c *bot.Client, e *gumble.TextMessage) {
 	}
 }
 
+func handleSignals(c *bot.Client, configFile string) {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGHUP)
+
+	var err error
+	for {
+		s := <-signals
+		switch s {
+		case syscall.SIGHUP:
+			log.Printf("Reloading config file %q", configFile)
+			c.Config, err = bot.LoadConfig(configFile)
+			if err != nil {
+				log.Printf("Error reloading config: %s", err)
+			}
+		}
+	}
+}
+
 func main() {
 	var configFile string
 	flag.StringVar(&configFile, "config", "config.yaml", "Configuration file")
@@ -52,6 +73,7 @@ func main() {
 		log.Fatalf("Error creating client: %s", err)
 	}
 	defer client.Stop()
+	go handleSignals(client, configFile)
 
 	log.Printf("Waiting for events...")
 	for {
