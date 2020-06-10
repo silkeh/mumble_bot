@@ -2,15 +2,41 @@ package main
 
 import (
 	"flag"
+	"layeh.com/gumble/gumble"
 	"log"
 	"strings"
-
-	"github.com/silkeh/mumble_bot/mumble"
 )
+
+func handleUserChange(c *Client, e *gumble.UserChangeEvent) {
+	switch {
+	case e.Type.Has(gumble.UserChangeConnected):
+		// First join
+		if len(c.Mumble.Users) == 2 {
+			c.SendSticker("welcome")
+		}
+	case e.Type.Has(gumble.UserChangeConnected):
+		// Last leave
+		if len(c.Mumble.Users) == 1 {
+			c.SendSticker("goodbye")
+		}
+	}
+}
+
+func handleTextMessage(c *Client, e *gumble.TextMessage) {
+	res := ""
+	cmd := strings.Split(e.Message, " ")
+	if f, ok := commandHandlers[cmd[0]]; ok {
+		res = f(c, cmd[0], cmd[1:]...)
+	} else {
+		res = commandHandlers[""](c, cmd[0], cmd[1:]...)
+	}
+	if res != "" {
+		c.Mumble.SendTextResponse(e, res)
+	}
+}
 
 func main() {
 	var configFile string
-
 	flag.StringVar(&configFile, "config", "config.yaml", "Configuration file")
 	flag.Parse()
 
@@ -26,23 +52,12 @@ func main() {
 	defer client.Stop()
 
 	log.Printf("Waiting for events...")
-	for c := range client.Mumble.Out {
-		if c == mumble.Join && len(client.Mumble.Users) > 1 {
-			client.SendSticker("welcome")
-		}
-
-		cmd := strings.Split(c, " ")
-		switch cmd[0] {
-		case "!hold":
-			go client.PlayHold(cmd[1:]...)
-		case "!volume--":
-			client.ChangeVolume(0.5)
-		case "!volume++":
-			client.ChangeVolume(2)
-		case "!stop":
-			client.Mumble.StopAudio()
-		default:
-			client.SendSticker(cmd[0][1:])
+	for {
+		select {
+		case e := <-client.Mumble.UserChanges:
+			handleUserChange(client, e)
+		case msg := <-client.Mumble.Messages:
+			handleTextMessage(client, msg)
 		}
 	}
 }

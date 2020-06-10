@@ -60,30 +60,30 @@ func NewClient(config *Config) (c *Client, err error) {
 }
 
 // SendSticker sends a sticker to a either Matrix or Telegram.
-func (c *Client) SendSticker(name string) string {
+func (c *Client) SendSticker(name string) error {
 	if c.Telegram != nil {
 		s, ok := c.Config.Telegram.Stickers[name]
 		if !ok {
-			return fmt.Sprintf("unknown sticker: %q", name)
+			return fmt.Errorf("unknown sticker: %q", name)
 		}
 		_, err := c.Telegram.SendSticker(s)
 		if err != nil {
-			return err.Error()
+			return err
 		}
 	}
 
 	if c.Matrix != nil {
 		s, ok := c.Config.Matrix.Stickers[name]
 		if !ok {
-			return fmt.Sprintf("unknown sticker: %q", name)
+			return fmt.Errorf("unknown sticker: %q", name)
 		}
 		_, err := c.Matrix.SendSticker(s)
 		if err != nil {
-			return err.Error()
+			return err
 		}
 	}
 
-	return ""
+	return nil
 }
 
 // ChangeVolume changes the volume of any Mumble audio played.
@@ -101,13 +101,8 @@ func (c *Client) Volume() float32 {
 }
 
 // PlayHold plays hold music from a raw 16-bit 48k PCM file in a loop until Mumble.StopAudio() is called.
-func (c *Client) PlayHold(args ...string) {
-	music, ok := c.Config.Mumble.HoldMusic[args[0]]
-	if !ok {
-		return
-	}
-
-	fh, err := os.Open(music)
+func (c *Client) PlayHold(path string) {
+	fh, err := os.Open(path)
 	if err != nil {
 		log.Printf("Error playing hold music %q: %s", "", err)
 		return

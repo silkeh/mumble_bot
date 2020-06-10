@@ -10,30 +10,29 @@ import (
 	_ "layeh.com/gumble/opus" // Ensures Opus compatibility
 )
 
-// Preconfigured output events
-const (
-	Join  = "join"
-	Leave = "leave"
-)
-
-// Client is a thread-safe mumble client
+// Client is a thread-safe mumble client.
 type Client struct {
 	sync.Mutex
 	*gumble.Client
-	Out       chan string
-	audioOut  sync.Mutex
-	stopAudio bool
+	Messages    chan *gumble.TextMessage
+	UserChanges chan *gumble.UserChangeEvent
+	Audio       *AudioListener
+	audioOut    sync.Mutex
+	stopAudio   bool
 }
 
-// NewClient initialises and returns a Mumble Client
+// NewClient initialises and returns a Mumble Client.
 func NewClient(server, user string) (c *Client, err error) {
 	c = &Client{
-		Out: make(chan string),
+		Messages:    make(chan *gumble.TextMessage),
+		UserChanges: make(chan *gumble.UserChangeEvent),
+		Audio:       new(AudioListener),
 	}
 
 	// Client configuration
 	config := gumble.NewConfig()
 	config.Username = user
+	config.AttachAudio(c.Audio)
 	config.Attach(gumbleutil.Listener{
 		UserChange:  c.changeHandler,
 		TextMessage: c.textMessageHandler,
@@ -49,20 +48,27 @@ func NewClient(server, user string) (c *Client, err error) {
 	return
 }
 
-// changeHandler handles room membership changes
+// changeHandler handles room membership changes.
 func (c *Client) changeHandler(e *gumble.UserChangeEvent) {
-	if e.Type.Has(gumble.UserChangeConnected) {
-		c.Out <- Join
-	} else if e.Type.Has(gumble.UserChangeDisconnected) {
-		c.Out <- Leave
+	if e.Type.Has(gumble.UserChangeConnected) || e.Type.Has(gumble.UserChangeDisconnected) {
+		c.UserChanges <- e
 	}
 }
 
-// textMessageHandler handler text messages, and passes commands on
+// textMessageHandler handles text messages, and passes commands on.
 func (c *Client) textMessageHandler(e *gumble.TextMessageEvent) {
 	if strings.HasPrefix(e.TextMessage.Message, "!") {
-		c.Out <- e.TextMessage.Message
+		c.Messages <- &e.TextMessage
 	}
+}
+
+// SendTextResponse sends a simple text response to the given message.
+func (c *Client) SendTextResponse(e *gumble.TextMessage, msg string) {
+	c.Send(&gumble.TextMessage{
+		Sender:   c.Self,
+		Channels: e.Channels,
+		Message:  msg,
+	})
 }
 
 // SendAudio sends the given 48 kHz 16-bit PCM audio to the main audio channel.
