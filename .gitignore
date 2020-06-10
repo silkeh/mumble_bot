@@ -1,7 +1,6 @@
-cmd/mumble_telegram/mumble_telegram
-cmd/mumble_matrix/mumble_matrix
-
 # Binaries for programs and plugins
+/mumble_bot
+cmd/mumble_bot/mumble_bot
 *.exe
 *.exe~
 *.dll
@@ -13,4 +12,3 @@ cmd/mumble_matrix/mumble_matrix
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
-
