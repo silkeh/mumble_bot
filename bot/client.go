@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"sync"
 
@@ -101,24 +100,64 @@ func (c *Client) Volume() float32 {
 }
 
 // PlayHold plays hold music from a raw 16-bit 48k PCM file in a loop until Mumble.StopAudio() is called.
-func (c *Client) PlayHold(path string) {
+func (c *Client) PlayHold(path string) error {
 	fh, err := os.Open(path)
 	if err != nil {
-		log.Printf("Error playing hold music %q: %s", "", err)
-		return
+		return err
 	}
 	defer fh.Close()
 
 	bytes, err := ioutil.ReadAll(fh)
 	if err != nil {
-		log.Printf("Error playing hold music %q: %s", "", err)
+		return err
 	}
 
+	// Play the loop in separate threads
 	ch := make(chan int16)
 	go c.Mumble.StreamAudio(ch)
-	defer close(ch)
-	//
+	go c.loopRaw(ch, bytes)
+	return nil
+}
+
+// PlaySound plays a sound file containing raw 16-bit 48k PCM file once,
+// or until Mumble.StopAudio() is called.
+func (c *Client) PlaySound(path string) error {
+	fh, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer fh.Close()
+
+	bytes, err := ioutil.ReadAll(fh)
+	if err != nil {
+		return err
+	}
+
+	go c.playRaw(bytes)
+	return nil
+}
+
+// playRaw plays a byte slice containing 16-bit 48k PCM audio once.
+func (c *Client) playRaw(bytes []byte) {
+	// Decode and adjust audio
+	volume := c.Volume()
+	samples := make([]int16, len(bytes)/2)
+	for i := range samples {
+		samples[i] = int16(float32(int16(binary.LittleEndian.Uint16(bytes[i*2:i*2+2]))) * volume)
+	}
+
+	// Play the audio
 	c.Mumble.Self.SetSelfMuted(false)
+	c.Mumble.SendAudio(samples)
+	c.Mumble.Self.SetSelfDeafened(true)
+}
+
+// loopRaw loops a byte containing 16-bit 48k PCM audio in a loop,
+// with volume adjusted on the fly.
+func (c *Client) loopRaw(ch chan<- int16, bytes []byte) {
+	c.Mumble.Self.SetSelfMuted(false)
+	defer c.Mumble.Self.SetSelfDeafened(true)
+	defer close(ch)
 
 	audioFrameSize := c.Mumble.Config.AudioFrameSize()
 	volume := c.Volume()
@@ -133,8 +172,6 @@ func (c *Client) PlayHold(path string) {
 			}
 		}
 	}
-
-	c.Mumble.Self.SetSelfDeafened(true)
 }
 
 // Stop stops this client.
