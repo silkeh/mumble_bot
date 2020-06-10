@@ -1,0 +1,28 @@
+mumble:
+  user: Bot
+  server: localhost:64738
+  hold_music:
+    "0": sounds/macroform-the_simplicity_48k.raw
+
+telegram:
+  token: "<secret>"
+  target: ""
+  stickers:
+#    label:
+#      file:
+#        fileid: <file id>
+
+matrix:
+  server: "https://matrix.org"
+  user: ""
+  token: "<secret>"
+  room: ""
+  stickers:
+#    name:
+#      url: mxc://...
+#      body: "Some text"
+#      info:
+#        mime_type: image/webp
+#        h: 203
+#        w: 256
+#        size: 101312
