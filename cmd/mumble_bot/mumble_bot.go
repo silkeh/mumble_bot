@@ -2,12 +2,13 @@ package main
 
 import (
 	"flag"
+	"github.com/silkeh/mumble_bot/bot"
 	"layeh.com/gumble/gumble"
 	"log"
 	"strings"
 )
 
-func handleUserChange(c *Client, e *gumble.UserChangeEvent) {
+func handleUserChange(c *bot.Client, e *gumble.UserChangeEvent) {
 	switch {
 	case e.Type.Has(gumble.UserChangeConnected):
 		// First join
@@ -22,7 +23,7 @@ func handleUserChange(c *Client, e *gumble.UserChangeEvent) {
 	}
 }
 
-func handleTextMessage(c *Client, e *gumble.TextMessage) {
+func handleTextMessage(c *bot.Client, e *gumble.TextMessage) {
 	res := ""
 	cmd := strings.Split(e.Message, " ")
 	if f, ok := commandHandlers[cmd[0]]; ok {
@@ -40,12 +41,12 @@ func main() {
 	flag.StringVar(&configFile, "config", "config.yaml", "Configuration file")
 	flag.Parse()
 
-	config, err := LoadConfig(configFile)
+	config, err := bot.LoadConfig(configFile)
 	if err != nil {
 		log.Fatalf("Error loading config file %q: %s", configFile, err)
 	}
 
-	client, err := NewClient(config)
+	client, err := bot.NewClient(config)
 	if err != nil {
 		log.Fatalf("Error creating client: %s", err)
 	}
