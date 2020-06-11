@@ -65,13 +65,13 @@ func commandClip(c *bot.Client, cmd string, args ...string) (resp string) {
 }
 
 func commandDecreaseVolume(c *bot.Client, cmd string, args ...string) (resp string) {
-	c.ChangeVolume(0.5)
-	return fmt.Sprintf("Volume set to %.1f", c.Volume())
+	c.ChangeVolume(-1)
+	return fmt.Sprintf("Volume set to %v", c.Volume())
 }
 
 func commandIncreaseVolume(c *bot.Client, cmd string, args ...string) (resp string) {
-	c.ChangeVolume(2)
-	return fmt.Sprintf("Volume set to %.1f", c.Volume())
+	c.ChangeVolume(1)
+	return fmt.Sprintf("Volume set to %v", c.Volume())
 }
 
 func commandStopAudio(c *bot.Client, cmd string, args ...string) (resp string) {

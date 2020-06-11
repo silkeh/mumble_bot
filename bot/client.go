@@ -19,13 +19,18 @@ type Client struct {
 	Mumble   *mumble.Client
 	Matrix   *matrix.Client
 	Telegram *telegram.Client
-	volume   float32
+	volume   uint8
 }
+
+const (
+	MinVolume = 0
+	MaxVolume = 16
+)
 
 // NewClient initializes the client with a given config.
 // Either Matrix or Telegram may be configured, not both at the same time.
 func NewClient(config *Config) (c *Client, err error) {
-	c = &Client{Config: config, volume: 1}
+	c = &Client{Config: config, volume: 15}
 
 	// Check if Matrix and Telegram aren't enabled at the same time.
 	if config.Telegram != nil && config.Matrix != nil {
@@ -85,15 +90,22 @@ func (c *Client) SendSticker(name string) error {
 	return nil
 }
 
-// ChangeVolume changes the volume of any Mumble audio played.
-func (c *Client) ChangeVolume(f float32) {
+// SetVolume sets the volume of any Mumble audio played.
+func (c *Client) SetVolume(n uint8) {
 	c.Lock()
 	defer c.Unlock()
-	c.volume *= f
+	c.volume = bound8(n, MinVolume, MaxVolume)
+}
+
+// ChangeVolume changes the volume of any Mumble audio played.
+func (c *Client) ChangeVolume(n int8) {
+	c.Lock()
+	defer c.Unlock()
+	c.volume = bound8(uint8(int8(c.volume) + n), MinVolume, MaxVolume)
 }
 
 // Volume returns the current volume level.
-func (c *Client) Volume() float32 {
+func (c *Client) Volume() uint8 {
 	c.Lock()
 	defer c.Unlock()
 	return c.volume
@@ -140,10 +152,10 @@ func (c *Client) PlaySound(path string) error {
 // playRaw plays a byte slice containing 16-bit 48k PCM audio once.
 func (c *Client) playRaw(bytes []byte) {
 	// Decode and adjust audio
-	volume := c.Volume()
+	volume := MaxVolume - c.Volume()
 	samples := make([]int16, len(bytes)/2)
 	for i := range samples {
-		samples[i] = int16(float32(int16(binary.LittleEndian.Uint16(bytes[i*2:i*2+2]))) * volume)
+		samples[i] = int16(binary.LittleEndian.Uint16(bytes[i*2:i*2+2])) >> volume
 	}
 
 	// Play the audio
@@ -156,13 +168,13 @@ func (c *Client) loopRaw(ch chan<- int16, bytes []byte) {
 	defer close(ch)
 
 	audioFrameSize := c.Mumble.Config.AudioFrameSize()
-	volume := c.Volume()
+	volume := MaxVolume - c.Volume()
 	for i := 0; true; i = (i + 1) % (len(bytes) / 2) {
-		ch <- int16(float32(int16(binary.LittleEndian.Uint16(bytes[i*2:i*2+2]))) * volume)
+		ch <- int16(binary.LittleEndian.Uint16(bytes[i*2:i*2+2])) >> volume
 
 		// Do the slow updates every frame
 		if i%audioFrameSize == 0 {
-			volume = c.Volume()
+			volume = MaxVolume - c.Volume()
 			if c.Mumble.AudioStopped() {
 				break
 			}
@@ -174,4 +186,14 @@ func (c *Client) loopRaw(ch chan<- int16, bytes []byte) {
 func (c *Client) Stop() {
 	c.Telegram.Stop()
 	c.Mumble.Disconnect()
+}
+
+func bound8(v, min, max uint8) uint8 {
+	if v >= max {
+		return max
+	}
+	if v <= min {
+		return min
+	}
+	return v
 }
