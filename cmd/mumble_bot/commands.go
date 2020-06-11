@@ -3,7 +3,11 @@ package main
 import (
 	"fmt"
 	"github.com/silkeh/mumble_bot/bot"
+	"strings"
 )
+
+// commandPrefix contains the prefix for all commands.
+var commandPrefix = "!"
 
 // CommandHandler is the function signature for a command handler.
 type CommandHandler func(c *bot.Client, cmd string, args ...string) (resp string)
@@ -15,7 +19,16 @@ var commandHandlers = map[string]CommandHandler{
 	"!volume--": commandDecreaseVolume,
 	"!volume++": commandIncreaseVolume,
 	"!stop":     commandStopAudio,
-	"":          commandSendSticker,
+	"!sticker":  commandSendSticker,
+}
+
+func handleCommand(c *bot.Client, s string) string {
+	cmd, args := parseCommand(s)
+	if f, ok := commandHandlers[cmd]; ok {
+		return f(c, cmd, args...)
+	}
+
+	return commandDefault(c, cmd, args...)
 }
 
 func commandHold(c *bot.Client, cmd string, args ...string) (resp string) {
@@ -70,4 +83,18 @@ func commandSendSticker(c *bot.Client, cmd string, args ...string) (resp string)
 		return fmt.Sprintf("Error: %s", err)
 	}
 	return
+}
+
+func commandDefault(c *bot.Client, cmd string, args ...string) (resp string) {
+	// Ignore non-commands
+	if !strings.HasPrefix(cmd, commandPrefix) {
+		return ""
+	}
+
+	// Resolve any configured aliases
+	if alias, ok := c.Config.Mumble.Alias[cmd[len(commandPrefix):]]; ok {
+		return handleCommand(c, commandPrefix + alias)
+	}
+
+	return fmt.Sprintf("Unknown command: %s", cmd)
 }

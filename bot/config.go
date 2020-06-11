@@ -10,6 +10,7 @@ import (
 // MumbleConfig represents configuration for a Mumble client.
 type MumbleConfig struct {
 	Server, User string
+	Alias        map[string]string
 	Music        struct {
 		Hold  map[string]string
 		Clips map[string]string

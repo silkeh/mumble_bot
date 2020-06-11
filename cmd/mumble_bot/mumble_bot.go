@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/silkeh/mumble_bot/bot"
@@ -28,13 +27,7 @@ func handleUserChange(c *bot.Client, e *gumble.UserChangeEvent) {
 }
 
 func handleTextMessage(c *bot.Client, e *gumble.TextMessage) {
-	res := ""
-	cmd := strings.Split(e.Message, " ")
-	if f, ok := commandHandlers[cmd[0]]; ok {
-		res = f(c, cmd[0], cmd[1:]...)
-	} else {
-		res = commandHandlers[""](c, cmd[0], cmd[1:]...)
-	}
+	res := handleCommand(c, e.Message)
 	if res != "" {
 		c.Mumble.SendTextResponse(e, res)
 	}
