@@ -5,6 +5,7 @@ import (
 	"github.com/silkeh/mumble_bot/bot"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 )
 
@@ -18,6 +19,7 @@ type CommandHandler func(c *bot.Client, cmd string, args ...string) (resp string
 var commandHandlers = map[string]CommandHandler{
 	"!hold":     commandHold,
 	"!play":     commandClip,
+	"!volume":   commandSetVolume,
 	"!volume--": commandDecreaseVolume,
 	"!volume++": commandIncreaseVolume,
 	"!stop":     commandStopAudio,
@@ -62,6 +64,21 @@ func commandClip(c *bot.Client, cmd string, args ...string) (resp string) {
 		return fmt.Sprintf("Error playing music clip %q: %s", args[0], err)
 	}
 	return
+}
+
+func commandSetVolume(c *bot.Client, cmd string, args ...string) (resp string) {
+	usage := fmt.Sprintf("Usage: %s %v-%v", cmd, bot.MinVolume, bot.MaxVolume)
+	if len(args) != 1 {
+		return usage
+	}
+
+	v, err := strconv.ParseUint(args[0], 10, 8)
+	if err != nil || v > bot.MaxVolume || v < bot.MinVolume {
+		return usage
+	}
+
+	c.SetVolume(uint8(v%256))
+	return fmt.Sprintf("Volume set to %v", c.Volume())
 }
 
 func commandDecreaseVolume(c *bot.Client, cmd string, args ...string) (resp string) {
