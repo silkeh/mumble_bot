@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/silkeh/mumble_bot/bot"
+	"os"
+	"path"
 	"strings"
 )
 
@@ -32,8 +34,12 @@ func handleCommand(c *bot.Client, s string) string {
 }
 
 func commandHold(c *bot.Client, cmd string, args ...string) (resp string) {
-	file, ok := c.Config.Mumble.Music.Hold[args[0]]
-	if !ok {
+	if len(args) != 1 {
+		return fmt.Sprintf("Usage: %s <name>", cmd)
+	}
+
+	file := path.Join(c.Config.Mumble.Sounds.Hold, args[0] + ".raw")
+	if _, err := os.Stat(file); os.IsNotExist(err) {
 		return "Unknown hold music"
 	}
 	if err := c.PlayHold(file); err != nil {
@@ -47,9 +53,9 @@ func commandClip(c *bot.Client, cmd string, args ...string) (resp string) {
 		return fmt.Sprintf("Usage: %s <clip>", cmd)
 	}
 
-	file, ok := c.Config.Mumble.Music.Clips[args[0]]
-	if !ok {
-		return fmt.Sprintf("Unknown music clip: %q", args[0])
+	file := path.Join(c.Config.Mumble.Sounds.Clips, args[0] + ".raw")
+	if _, err := os.Stat(file); os.IsNotExist(err) {
+		return "Unknown hold music"
 	}
 
 	if err := c.PlaySound(file); err != nil {

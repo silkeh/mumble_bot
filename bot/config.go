@@ -11,9 +11,9 @@ import (
 type MumbleConfig struct {
 	Server, User string
 	Alias        map[string]string
-	Music        struct {
-		Hold  map[string]string
-		Clips map[string]string
+	Sounds       struct {
+		Hold  string
+		Clips string
 	}
 }
 

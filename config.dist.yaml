@@ -1,8 +1,9 @@
 mumble:
   user: Bot
   server: localhost:64738
-  hold_music:
-    "0": sounds/macroform-the_simplicity_48k.raw
+  music:
+    hold: ./sounds
+    clips: ./sounds
 
 telegram:
   token: "<secret>"
