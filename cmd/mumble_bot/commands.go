@@ -30,10 +30,15 @@ func commandHold(c *bot.Client, cmd string, args ...string) (resp string) {
 }
 
 func commandClip(c *bot.Client, cmd string, args ...string) (resp string) {
+	if len(args) != 1 {
+		return fmt.Sprintf("Usage: %s <clip>", cmd)
+	}
+
 	file, ok := c.Config.Mumble.Music.Clips[args[0]]
 	if !ok {
-		return "Unknown music clip"
+		return fmt.Sprintf("Unknown music clip: %q", args[0])
 	}
+
 	if err := c.PlaySound(file); err != nil {
 		return fmt.Sprintf("Error playing music clip %q: %s", args[0], err)
 	}
@@ -42,12 +47,12 @@ func commandClip(c *bot.Client, cmd string, args ...string) (resp string) {
 
 func commandDecreaseVolume(c *bot.Client, cmd string, args ...string) (resp string) {
 	c.ChangeVolume(0.5)
-	return
+	return fmt.Sprintf("Volume set to %.1f", c.Volume())
 }
 
 func commandIncreaseVolume(c *bot.Client, cmd string, args ...string) (resp string) {
 	c.ChangeVolume(2)
-	return
+	return fmt.Sprintf("Volume set to %.1f", c.Volume())
 }
 
 func commandStopAudio(c *bot.Client, cmd string, args ...string) (resp string) {
@@ -56,7 +61,11 @@ func commandStopAudio(c *bot.Client, cmd string, args ...string) (resp string) {
 }
 
 func commandSendSticker(c *bot.Client, cmd string, args ...string) (resp string) {
-	err := c.SendSticker(cmd[1:])
+	if len(args) != 1 {
+		return fmt.Sprintf("Usage: %s <sticker>", cmd)
+	}
+
+	err := c.SendSticker(args[0])
 	if err != nil {
 		return fmt.Sprintf("Error: %s", err)
 	}
