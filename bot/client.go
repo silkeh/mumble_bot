@@ -147,16 +147,12 @@ func (c *Client) playRaw(bytes []byte) {
 	}
 
 	// Play the audio
-	c.Mumble.Self.SetSelfMuted(false)
 	c.Mumble.SendAudio(samples)
-	c.Mumble.Self.SetSelfDeafened(true)
 }
 
 // loopRaw loops a byte containing 16-bit 48k PCM audio in a loop,
 // with volume adjusted on the fly.
 func (c *Client) loopRaw(ch chan<- int16, bytes []byte) {
-	c.Mumble.Self.SetSelfMuted(false)
-	defer c.Mumble.Self.SetSelfDeafened(true)
 	defer close(ch)
 
 	audioFrameSize := c.Mumble.Config.AudioFrameSize()

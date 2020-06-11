@@ -14,11 +14,15 @@ import (
 type Client struct {
 	sync.Mutex
 	*gumble.Client
-	Messages    chan *gumble.TextMessage
-	UserChanges chan *gumble.UserChangeEvent
-	Audio       *AudioListener
-	audioOut    sync.Mutex
-	stopAudio   bool
+	Messages      chan *gumble.TextMessage
+	UserChanges   chan *gumble.UserChangeEvent
+	Audio         *AudioListener
+	audioOut      sync.Mutex
+	audioMuted    bool
+	audioDeafened bool
+	stopAudio     bool
+	selfMuted     bool
+	selfDeafened  bool
 }
 
 // NewClient initialises and returns a Mumble Client.
@@ -44,7 +48,7 @@ func NewClient(server, user string) (c *Client, err error) {
 		return
 	}
 
-	c.Self.SetSelfDeafened(true)
+	c.SetSelfDeafened(true)
 	return
 }
 
@@ -74,8 +78,8 @@ func (c *Client) SendTextResponse(e *gumble.TextMessage, msg string) {
 // SendAudio sends the given 48 kHz 16-bit PCM audio to the main audio channel.
 // This function waits for any earlier SendAudio() or StreamAudio() calls to finish.
 func (c *Client) SendAudio(samples []int16) {
-	c.audioOut.Lock()
-	defer c.audioOut.Unlock()
+	c.LockAudio()
+	defer c.UnlockAudio()
 
 	out := c.AudioOutgoing()
 	defer close(out)
@@ -97,8 +101,8 @@ func (c *Client) SendAudio(samples []int16) {
 // StreamAudio sends the given 48 kHz 16-bit PCM audio to the main audio channel.
 // This function waits for any earlier SendAudio() or StreamAudio() calls to finish.
 func (c *Client) StreamAudio(ch <-chan int16) {
-	c.audioOut.Lock()
-	defer c.audioOut.Unlock()
+	c.LockAudio()
+	defer c.UnlockAudio()
 
 	out := c.AudioOutgoing()
 	defer close(out)
@@ -133,4 +137,62 @@ func (c *Client) StopAudio() {
 	c.Lock()
 	defer c.Unlock()
 	c.stopAudio = true
+}
+
+// LockAudio requests an audio play lock.
+// This unmutes and undeafens, which is restored in UnlockAudio().
+func (c *Client) LockAudio() {
+	c.audioOut.Lock()
+	c.audioMuted = c.SelfMuted()
+	c.audioDeafened = c.SelfDeafened()
+	c.SetSelfMuted(false)
+}
+
+// UnlockAudio releases the audio play lock.
+// This restores the muted and deafened state when the lock was requested.
+func (c *Client) UnlockAudio() {
+	if c.audioDeafened {
+		c.SetSelfDeafened(c.audioDeafened)
+	} else if c.audioMuted {
+		c.SetSelfMuted(c.audioMuted)
+	}
+	c.audioOut.Unlock()
+}
+
+// SelfMuted shows whether the client can transmit audio or not.
+func (c *Client) SelfMuted() bool {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.selfMuted
+}
+
+// SetSelfMuted sets whether the client can transmit audio or not.
+// Setting this to false also sets deafened to false.
+// Note that this is bypassed by calling Client.Self.SetSelfMuted(), so don't.
+func (c *Client) SetSelfMuted(muted bool) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.selfMuted = muted
+	c.Self.SetSelfMuted(muted)
+}
+
+// SelfDeafened shows whether the client can receive audio or not.
+func (c *Client) SelfDeafened() bool {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.selfDeafened
+}
+
+// SetSelfDeafened sets whether the client can receive audio or not.
+// Setting this to true also sets muted to true.
+// Note that this is bypassed by calling Client.Self.SetSelfDeafened(), so don't.
+func (c *Client) SetSelfDeafened(deafened bool) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.selfDeafened = deafened
+	c.Self.SetSelfDeafened(deafened)
 }
