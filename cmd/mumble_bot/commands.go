@@ -64,9 +64,7 @@ func init() {
 
 func commandHold(c *bot.Client, cmd string, args ...string) (resp string) {
 	if len(args) != 1 {
-		files, _ := listFiles(c.Config.Mumble.Sounds.Hold, soundExtension)
-		usage, _ := renderTemplate("hold", soundUsageParams{cmd, files})
-		return usage
+		return renderSoundUsage(cmd, c.Config.Mumble.Sounds.Hold)
 	}
 
 	file := path.Join(c.Config.Mumble.Sounds.Hold, args[0]+soundExtension)
@@ -81,9 +79,7 @@ func commandHold(c *bot.Client, cmd string, args ...string) (resp string) {
 
 func commandClip(c *bot.Client, cmd string, args ...string) (resp string) {
 	if len(args) != 1 {
-		files, _ := listFiles(c.Config.Mumble.Sounds.Hold, soundExtension)
-		usage, _ := renderTemplate("hold", soundUsageParams{cmd, files})
-		return usage
+		return renderSoundUsage(cmd, c.Config.Mumble.Sounds.Clips)
 	}
 
 	file := path.Join(c.Config.Mumble.Sounds.Clips, args[0]+soundExtension)
@@ -150,6 +146,25 @@ func commandDefault(c *bot.Client, cmd string, args ...string) (resp string) {
 	}
 
 	return fmt.Sprintf("Unknown command: %s", cmd)
+}
+
+func renderSoundUsage(command, path string) string {
+	files, err := listFiles(path, soundExtension)
+	if err != nil {
+		return err.Error()
+	}
+	params := struct {
+		Command string
+		Files   []string
+	}{
+		command,
+		files,
+	}
+	usage, err := renderTemplate("sound", params)
+	if err != nil {
+		return err.Error()
+	}
+	return usage
 }
 
 func renderTemplate(name string, data interface{}) (string, error) {
