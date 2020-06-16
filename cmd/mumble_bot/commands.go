@@ -1,16 +1,22 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
-	"github.com/silkeh/mumble_bot/bot"
+	"html/template"
 	"os"
 	"path"
 	"strconv"
 	"strings"
+
+	"github.com/silkeh/mumble_bot/bot"
 )
 
 // commandPrefix contains the prefix for all commands.
 var commandPrefix = "!"
+
+// soundExtension contains the filename extension for all sound files.
+var soundExtension = ".raw"
 
 // CommandHandler is the function signature for a command handler.
 type CommandHandler func(c *bot.Client, cmd string, args ...string) (resp string)
@@ -35,12 +41,35 @@ func handleCommand(c *bot.Client, s string) string {
 	return commandDefault(c, cmd, args...)
 }
 
+var templates *template.Template
+
+type soundUsageParams struct {
+	Command string
+	Files   []string
+}
+
+var soundUsage = `
+Usage: {{.Command}} &lt;name&gt;<br/>
+Where &lt;name&gt; is one of:
+<ul>
+{{range .Files}}
+<li>{{.}}</li>
+{{end}}
+</ul>
+`
+
+func init() {
+	templates = template.Must(template.New("sound").Parse(soundUsage))
+}
+
 func commandHold(c *bot.Client, cmd string, args ...string) (resp string) {
 	if len(args) != 1 {
-		return fmt.Sprintf("Usage: %s <name>", cmd)
+		files, _ := listFiles(c.Config.Mumble.Sounds.Hold, soundExtension)
+		usage, _ := renderTemplate("hold", soundUsageParams{cmd, files})
+		return usage
 	}
 
-	file := path.Join(c.Config.Mumble.Sounds.Hold, args[0] + ".raw")
+	file := path.Join(c.Config.Mumble.Sounds.Hold, args[0]+soundExtension)
 	if _, err := os.Stat(file); os.IsNotExist(err) {
 		return "Unknown hold music"
 	}
@@ -52,10 +81,12 @@ func commandHold(c *bot.Client, cmd string, args ...string) (resp string) {
 
 func commandClip(c *bot.Client, cmd string, args ...string) (resp string) {
 	if len(args) != 1 {
-		return fmt.Sprintf("Usage: %s <clip>", cmd)
+		files, _ := listFiles(c.Config.Mumble.Sounds.Hold, soundExtension)
+		usage, _ := renderTemplate("hold", soundUsageParams{cmd, files})
+		return usage
 	}
 
-	file := path.Join(c.Config.Mumble.Sounds.Clips, args[0] + ".raw")
+	file := path.Join(c.Config.Mumble.Sounds.Clips, args[0]+soundExtension)
 	if _, err := os.Stat(file); os.IsNotExist(err) {
 		return "Unknown hold music"
 	}
@@ -67,17 +98,16 @@ func commandClip(c *bot.Client, cmd string, args ...string) (resp string) {
 }
 
 func commandSetVolume(c *bot.Client, cmd string, args ...string) (resp string) {
-	usage := fmt.Sprintf("Usage: %s %v-%v", cmd, bot.MinVolume, bot.MaxVolume)
 	if len(args) != 1 {
-		return usage
+		return fmt.Sprintf("Volume is %v/%v", c.Volume(), bot.MaxVolume)
 	}
 
 	v, err := strconv.ParseUint(args[0], 10, 8)
 	if err != nil || v > bot.MaxVolume || v < bot.MinVolume {
-		return usage
+		return fmt.Sprintf("Usage: %s %v-%v", cmd, bot.MinVolume, bot.MaxVolume)
 	}
 
-	c.SetVolume(uint8(v%256))
+	c.SetVolume(uint8(v % 256))
 	return fmt.Sprintf("Volume set to %v", c.Volume())
 }
 
@@ -116,8 +146,14 @@ func commandDefault(c *bot.Client, cmd string, args ...string) (resp string) {
 
 	// Resolve any configured aliases
 	if alias, ok := c.Config.Mumble.Alias[cmd[len(commandPrefix):]]; ok {
-		return handleCommand(c, commandPrefix + alias)
+		return handleCommand(c, commandPrefix+alias)
 	}
 
 	return fmt.Sprintf("Unknown command: %s", cmd)
+}
+
+func renderTemplate(name string, data interface{}) (string, error) {
+	var buf bytes.Buffer
+	err := templates.ExecuteTemplate(&buf, name, data)
+	return buf.String(), err
 }
