@@ -23,7 +23,10 @@ type Client struct {
 }
 
 const (
+	// MinVolume represents the minimum volume that can be set.
 	MinVolume = 0
+
+	// MaxVolume represents the maximum volume that can be set.
 	MaxVolume = 16
 )
 
@@ -101,7 +104,7 @@ func (c *Client) SetVolume(n uint8) {
 func (c *Client) ChangeVolume(n int8) {
 	c.Lock()
 	defer c.Unlock()
-	c.volume = bound8(uint8(int8(c.volume) + n), MinVolume, MaxVolume)
+	c.volume = bound8(uint8(int8(c.volume)+n), MinVolume, MaxVolume)
 }
 
 // Volume returns the current volume level.
