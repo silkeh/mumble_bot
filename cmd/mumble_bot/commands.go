@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/justinian/dice"
 	"github.com/silkeh/mumble_bot/bot"
 )
 
@@ -30,6 +31,7 @@ var commandHandlers = map[string]CommandHandler{
 	"!volume++": commandIncreaseVolume,
 	"!stop":     commandStopAudio,
 	"!sticker":  commandSendSticker,
+	"!roll":     commandDiceRoll,
 }
 
 func handleCommand(c *bot.Client, s string) string {
@@ -171,4 +173,48 @@ func renderTemplate(name string, data interface{}) (string, error) {
 	var buf bytes.Buffer
 	err := templates.ExecuteTemplate(&buf, name, data)
 	return buf.String(), err
+}
+
+func commandDiceRoll(c *bot.Client, cmd string, args ...string) (resp string) {
+	if len(args) != 1 {
+		return fmt.Sprintf("Usage: %s &lt;description&gt;<br/>Example: %s 4d20", cmd, cmd)
+	}
+
+	result, _, err := dice.Roll(args[0])
+	if err != nil {
+		return fmt.Sprintf("Error: %s", err)
+	}
+
+	switch r := result.(type) {
+	case dice.StdResult:
+		resp = fmt.Sprintf("%v", r.Total)
+		if len(r.Rolls) > 1 {
+			resp += fmt.Sprintf(" (%s)", intJoin(r.Rolls, "+"))
+		}
+		if len(r.Dropped) > 0 {
+			resp += fmt.Sprintf(" (dropped %s)", intJoin(r.Dropped, ", "))
+		}
+	case dice.FudgeResult:
+		resp = fmt.Sprintf("%v", r.Total)
+		if len(r.Rolls) > 1 {
+			resp += fmt.Sprintf(" (%s)", intJoin(r.Rolls, "+"))
+		}
+	case dice.VsResult:
+		resp = fmt.Sprintf("successes: %v", r.Successes)
+		if len(r.Rolls) > 1 {
+			resp += fmt.Sprintf(" (%s)", intJoin(r.Rolls, ", "))
+		}
+	default:
+		resp = result.String()
+	}
+
+	return
+}
+
+func intJoin(elems []int, sep string) string {
+	strs := make([]string, len(elems))
+	for i, v := range elems {
+		strs[i] = fmt.Sprintf("%v", v)
+	}
+	return strings.Join(strs, sep)
 }
