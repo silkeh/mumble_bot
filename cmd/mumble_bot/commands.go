@@ -65,11 +65,11 @@ func init() {
 }
 
 func commandHold(c *bot.Client, cmd string, args ...string) (resp string) {
-	if len(args) != 1 {
+	if len(args) < 1 {
 		return renderSoundUsage(cmd, c.Config.Mumble.Sounds.Hold)
 	}
 
-	file := path.Join(c.Config.Mumble.Sounds.Hold, args[0]+soundExtension)
+	file := path.Join(c.Config.Mumble.Sounds.Hold, strings.Join(args, " ")+soundExtension)
 	if _, err := os.Stat(file); os.IsNotExist(err) {
 		return "Unknown hold music"
 	}
@@ -80,11 +80,11 @@ func commandHold(c *bot.Client, cmd string, args ...string) (resp string) {
 }
 
 func commandClip(c *bot.Client, cmd string, args ...string) (resp string) {
-	if len(args) != 1 {
+	if len(args) < 1 {
 		return renderSoundUsage(cmd, c.Config.Mumble.Sounds.Clips)
 	}
 
-	file := path.Join(c.Config.Mumble.Sounds.Clips, args[0]+soundExtension)
+	file := path.Join(c.Config.Mumble.Sounds.Clips, strings.Join(args, " ")+soundExtension)
 	if _, err := os.Stat(file); os.IsNotExist(err) {
 		return "Unknown hold music"
 	}
