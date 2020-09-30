@@ -7,8 +7,8 @@ require (
 	github.com/justinian/dice v1.0.1
 	github.com/matrix-org/gomatrix v0.0.0-20200827122206-7dd5e2a05bcd
 	github.com/pkg/errors v0.9.1 // indirect
-	google.golang.org/protobuf v1.24.0 // indirect
-	gopkg.in/tucnak/telebot.v2 v2.0.0-20200609204123-ddb943d5985e
+	google.golang.org/protobuf v1.25.0 // indirect
+	gopkg.in/tucnak/telebot.v2 v2.3.4
 	gopkg.in/yaml.v2 v2.3.0
-	layeh.com/gumble v0.0.0-20200528195103-d5a9569f0683
+	layeh.com/gumble v0.0.0-20200818122324-146f9205029b
 )
