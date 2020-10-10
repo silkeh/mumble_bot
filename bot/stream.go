@@ -8,7 +8,7 @@ import (
 )
 
 // capacity contains the default buffer capacity
-const capacity = 512
+const capacity = 2048
 
 // AudioStream represents an audio stream.
 type AudioStream interface {
@@ -36,28 +36,20 @@ func OpenSoundFile(path string) (AudioStream, error) {
 
 // ReadAll reads all data from an Audio Stream
 func ReadAll(a AudioStream) (b []int16, err error) {
-	buf := make([]int16, capacity, 16*capacity)
-	n := 0
+	buf := make([]int16, 0, 256*capacity)
 	for {
-		m, err := a.Read(buf[n:])
-		if m < 0 {
+		b := make([]int16, capacity)
+		n, err := a.Read(b)
+		if n < 0 {
 			panic("negative number of bytes returned")
 		}
 
-		n += m
+		buf = append(buf, b[:n]...)
 		if err == io.EOF {
-			return buf[:n], nil
+			return buf, nil
 		}
 		if err != nil {
 			return nil, err
-		}
-
-		if m <= cap(buf) {
-			buf = buf[:m]
-		} else {
-			old := buf
-			buf = make([]int16, cap(buf)+capacity, 16*capacity)
-			copy(buf[:len(old)], old)
 		}
 	}
 }

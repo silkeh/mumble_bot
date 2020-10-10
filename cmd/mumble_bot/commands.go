@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -17,7 +16,7 @@ import (
 var commandPrefix = "!"
 
 // soundExtension contains the filename extension for all sound files.
-var soundExtension = ".raw"
+var soundExtensions = []string{".raw", ".opus"}
 
 // CommandHandler is the function signature for a command handler.
 type CommandHandler func(c *bot.Client, cmd string, args ...string) (resp string)
@@ -69,10 +68,13 @@ func commandHold(c *bot.Client, cmd string, args ...string) (resp string) {
 		return renderSoundUsage(cmd, c.Config.Mumble.Sounds.Hold)
 	}
 
-	file := path.Join(c.Config.Mumble.Sounds.Hold, strings.Join(args, " ")+soundExtension)
-	if _, err := os.Stat(file); os.IsNotExist(err) {
-		return "Unknown hold music"
+	file, err := findFile(
+		path.Join(c.Config.Mumble.Sounds.Clips, strings.Join(args, " ")),
+		soundExtensions...)
+	if err != nil {
+		return err.Error()
 	}
+
 	if err := c.PlayHold(file); err != nil {
 		return fmt.Sprintf("Error playing hold music %q: %s", args[0], err)
 	}
@@ -84,9 +86,11 @@ func commandClip(c *bot.Client, cmd string, args ...string) (resp string) {
 		return renderSoundUsage(cmd, c.Config.Mumble.Sounds.Clips)
 	}
 
-	file := path.Join(c.Config.Mumble.Sounds.Clips, strings.Join(args, " ")+soundExtension)
-	if _, err := os.Stat(file); os.IsNotExist(err) {
-		return "Unknown hold music"
+	file, err := findFile(
+		path.Join(c.Config.Mumble.Sounds.Clips, strings.Join(args, " ")),
+		soundExtensions...)
+	if err != nil {
+		return err.Error()
 	}
 
 	if err := c.PlaySound(file); err != nil {
@@ -151,7 +155,7 @@ func commandDefault(c *bot.Client, cmd string, args ...string) (resp string) {
 }
 
 func renderSoundUsage(command, path string) string {
-	files, err := listFiles(path, soundExtension)
+	files, err := listFiles(path, soundExtensions...)
 	if err != nil {
 		return err.Error()
 	}

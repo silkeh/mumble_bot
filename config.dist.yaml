@@ -1,7 +1,7 @@
 mumble:
   user: Bot
   server: localhost:64738
-  music:
+  sounds:
     hold: ./sounds
     clips: ./sounds
 
