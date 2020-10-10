@@ -116,6 +116,16 @@ func (c *Client) Volume() uint8 {
 
 // PlayHold plays hold music from a raw 16-bit 48k PCM file in a loop until Mumble.StopAudio() is called.
 func (c *Client) PlayHold(path string) error {
+	return c.playFile(path, -1)
+}
+
+// PlaySound plays a sound file containing raw 16-bit 48k PCM file once,
+// or until Mumble.StopAudio() is called.
+func (c *Client) PlaySound(path string) error {
+	return c.playFile(path, 1)
+}
+
+func (c *Client) playFile(path string, count int) error {
 	fh, err := os.Open(path)
 	if err != nil {
 		return err
@@ -130,56 +140,28 @@ func (c *Client) PlayHold(path string) error {
 	// Play the loop in separate threads
 	ch := make(chan int16)
 	go c.Mumble.StreamAudio(ch)
-	go c.loopRaw(ch, bytes)
+	go c.playRaw(ch, bytes, count)
 	return nil
 }
 
-// PlaySound plays a sound file containing raw 16-bit 48k PCM file once,
-// or until Mumble.StopAudio() is called.
-func (c *Client) PlaySound(path string) error {
-	fh, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer fh.Close()
-
-	bytes, err := ioutil.ReadAll(fh)
-	if err != nil {
-		return err
-	}
-
-	go c.playRaw(bytes)
-	return nil
-}
-
-// playRaw plays a byte slice containing 16-bit 48k PCM audio once.
-func (c *Client) playRaw(bytes []byte) {
-	// Decode and adjust audio
-	volume := MaxVolume - c.Volume()
-	samples := make([]int16, len(bytes)/2)
-	for i := range samples {
-		samples[i] = int16(binary.LittleEndian.Uint16(bytes[i*2:i*2+2])) >> volume
-	}
-
-	// Play the audio
-	c.Mumble.SendAudio(samples)
-}
-
-// loopRaw loops a byte containing 16-bit 48k PCM audio in a loop,
+// playRaw loops a byte containing 16-bit 48k PCM audio a number of times,
 // with volume adjusted on the fly.
-func (c *Client) loopRaw(ch chan<- int16, bytes []byte) {
+func (c *Client) playRaw(ch chan<- int16, bytes []byte, count int) {
 	defer close(ch)
 
 	audioFrameSize := c.Mumble.Config.AudioFrameSize()
 	volume := MaxVolume - c.Volume()
-	for i := 0; true; i = (i + 1) % (len(bytes) / 2) {
-		ch <- int16(binary.LittleEndian.Uint16(bytes[i*2:i*2+2])) >> volume
 
-		// Do the slow updates every frame
-		if i%audioFrameSize == 0 {
-			volume = MaxVolume - c.Volume()
-			if c.Mumble.AudioStopped() {
-				break
+	for j := 0; j < 0 || j < count; j++ {
+		for i := 0; i < len(bytes)/2; i++ {
+			ch <- int16(binary.LittleEndian.Uint16(bytes[i*2:i*2+2])) >> volume
+
+			// Do the slow updates every frame
+			if i%audioFrameSize == 0 {
+				volume = MaxVolume - c.Volume()
+				if c.Mumble.AudioStopped() {
+					break
+				}
 			}
 		}
 	}
