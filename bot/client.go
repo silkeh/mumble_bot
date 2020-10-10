@@ -1,10 +1,7 @@
 package bot
 
 import (
-	"encoding/binary"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"sync"
 
 	"github.com/silkeh/mumble_bot/matrix"
@@ -125,14 +122,15 @@ func (c *Client) PlaySound(path string) error {
 	return c.playFile(path, 1)
 }
 
+// playFile plays an arbitrary audio file.
 func (c *Client) playFile(path string, count int) error {
-	fh, err := os.Open(path)
+	fh, err := OpenSoundFile(path)
 	if err != nil {
 		return err
 	}
 	defer fh.Close()
 
-	bytes, err := ioutil.ReadAll(fh)
+	pcm, err := ReadAll(fh)
 	if err != nil {
 		return err
 	}
@@ -140,21 +138,21 @@ func (c *Client) playFile(path string, count int) error {
 	// Play the loop in separate threads
 	ch := make(chan int16)
 	go c.Mumble.StreamAudio(ch)
-	go c.playRaw(ch, bytes, count)
+	go c.playRaw(ch, pcm, count)
 	return nil
 }
 
 // playRaw loops a byte containing 16-bit 48k PCM audio a number of times,
 // with volume adjusted on the fly.
-func (c *Client) playRaw(ch chan<- int16, bytes []byte, count int) {
+func (c *Client) playRaw(ch chan<- int16, pcm []int16, count int) {
 	defer close(ch)
 
 	audioFrameSize := c.Mumble.Config.AudioFrameSize()
 	volume := MaxVolume - c.Volume()
 
 	for j := 0; j < 0 || j < count; j++ {
-		for i := 0; i < len(bytes)/2; i++ {
-			ch <- int16(binary.LittleEndian.Uint16(bytes[i*2:i*2+2])) >> volume
+		for i, sample := range pcm {
+			ch <- sample >> volume
 
 			// Do the slow updates every frame
 			if i%audioFrameSize == 0 {
