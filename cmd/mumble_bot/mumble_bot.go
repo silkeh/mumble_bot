@@ -18,6 +18,10 @@ func handleUserChange(c *bot.Client, e *gumble.UserChangeEvent) {
 		if len(c.Mumble.Users) == 2 {
 			c.SendSticker("welcome")
 		}
+		file := path.Join(c.Config.Mumble.Sounds.Clips, e.User.Name.ToLower()+soundExtension)
+		if _, err := os.Stat(file); err == Nil {
+			c.PlaySound(file)
+		}
 	case e.Type.Has(gumble.UserChangeConnected):
 		// Last leave
 		if len(c.Mumble.Users) == 1 {
