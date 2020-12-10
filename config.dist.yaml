@@ -1,6 +1,13 @@
 mumble:
   user: Bot
   server: localhost:64738
+  alias:
+    help: play help
+  hooks:
+    first_join:
+      default: sticker welcome
+    join:
+      default: play welcome
   sounds:
     hold: ./sounds
     clips: ./sounds

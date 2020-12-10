@@ -7,11 +7,17 @@ import (
 	"os"
 )
 
+const (
+	defaultCommandPrefix = "!"
+)
+
 // MumbleConfig represents configuration for a Mumble client.
 type MumbleConfig struct {
-	Server, User string
-	Alias        map[string]string
-	Sounds       struct {
+	Server, User  string
+	CommandPrefix string
+	Alias         map[string]string
+	Hooks         map[string]map[string]string
+	Sounds        struct {
 		Hold  string
 		Clips string
 	}
@@ -45,5 +51,11 @@ func LoadConfig(path string) (*Config, error) {
 
 	config := new(Config)
 	yaml.NewDecoder(file).Decode(&config)
+
+	// Set defaults if unset
+	if config.Mumble.CommandPrefix == "" {
+		config.Mumble.CommandPrefix = defaultCommandPrefix
+	}
+
 	return config, nil
 }

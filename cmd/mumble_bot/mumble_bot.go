@@ -8,30 +8,7 @@ import (
 	"syscall"
 
 	"github.com/silkeh/mumble_bot/bot"
-	"layeh.com/gumble/gumble"
 )
-
-func handleUserChange(c *bot.Client, e *gumble.UserChangeEvent) {
-	switch {
-	case e.Type.Has(gumble.UserChangeConnected):
-		// First join
-		if len(c.Mumble.Users) == 2 {
-			c.SendSticker("welcome")
-		}
-	case e.Type.Has(gumble.UserChangeConnected):
-		// Last leave
-		if len(c.Mumble.Users) == 1 {
-			c.SendSticker("goodbye")
-		}
-	}
-}
-
-func handleTextMessage(c *bot.Client, e *gumble.TextMessage) {
-	res := handleCommand(c, e.Message)
-	if res != "" {
-		c.Mumble.SendTextResponse(e, res)
-	}
-}
 
 func handleSignals(c *bot.Client, configFile string) {
 	signals := make(chan os.Signal, 1)
@@ -69,12 +46,5 @@ func main() {
 	go handleSignals(client, configFile)
 
 	log.Printf("Waiting for events...")
-	for {
-		select {
-		case e := <-client.Mumble.UserChanges:
-			handleUserChange(client, e)
-		case msg := <-client.Mumble.Messages:
-			handleTextMessage(client, msg)
-		}
-	}
+	log.Fatal(client.Run())
 }

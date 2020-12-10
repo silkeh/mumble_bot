@@ -3,11 +3,13 @@ package bot
 import (
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 
 	"github.com/silkeh/mumble_bot/matrix"
 	"github.com/silkeh/mumble_bot/mumble"
 	"github.com/silkeh/mumble_bot/telegram"
+	"layeh.com/gumble/gumble"
 )
 
 // Client is a thread-safe multi-chat client.
@@ -17,6 +19,7 @@ type Client struct {
 	Mumble   *mumble.Client
 	Matrix   *matrix.Client
 	Telegram *telegram.Client
+	commands map[string]CommandHandler
 	volume   uint8
 }
 
@@ -28,10 +31,18 @@ const (
 	MaxVolume = 16
 )
 
+const (
+	joinHook       = "join"
+	leaveHook      = "leave"
+	firstJoinHook  = "first_join"
+	lastLeaveHook  = "last_leave"
+	defaultSubject = "default"
+)
+
 // NewClient initializes the client with a given config.
 // Either Matrix or Telegram may be configured, not both at the same time.
 func NewClient(config *Config) (c *Client, err error) {
-	c = &Client{Config: config, volume: 15}
+	c = &Client{Config: config, volume: 15, commands: defaultCommands}
 
 	// Check if Matrix and Telegram aren't enabled at the same time.
 	if config.Telegram != nil && config.Matrix != nil {
@@ -62,6 +73,72 @@ func NewClient(config *Config) (c *Client, err error) {
 	}
 
 	return
+}
+
+// Run the client.
+func (c *Client) Run() error {
+	for {
+		select {
+		case e := <-c.Mumble.UserChanges:
+			c.handleUserChange(e)
+		case msg := <-c.Mumble.Messages:
+			c.handleTextMessage(msg)
+		}
+	}
+}
+
+func (c *Client) handleUserChange(e *gumble.UserChangeEvent) {
+	switch {
+	case e.Type.Has(gumble.UserChangeConnected):
+		if len(c.Mumble.Users) == 2 {
+			c.ExecuteHook(firstJoinHook, e.User.Name)
+		}
+		c.ExecuteHook(joinHook, e.User.Name)
+	case e.Type.Has(gumble.UserChangeDisconnected):
+		if len(c.Mumble.Users) == 1 {
+			c.ExecuteHook(lastLeaveHook, e.User.Name)
+		}
+		c.ExecuteHook(leaveHook, e.User.Name)
+	}
+}
+
+func (c *Client) handleTextMessage(e *gumble.TextMessage) {
+	if !strings.HasPrefix(e.Message, c.Config.Mumble.CommandPrefix) {
+		return
+	}
+
+	res := c.HandleCommand(strings.TrimPrefix(e.Message, c.Config.Mumble.CommandPrefix))
+	if res != "" {
+		c.Mumble.SendTextResponse(e, res)
+	}
+}
+
+// HandleCommand handles a bot command.
+func (c *Client) HandleCommand(s string) string {
+	cmd, args := parseCommand(s)
+	if f, ok := c.commands[cmd]; ok {
+		return f(c, cmd, args...)
+	}
+
+	return commandDefault(c, cmd, args...)
+}
+
+// ExecuteHook executes a configured hook.
+func (c *Client) ExecuteHook(name, subject string) string {
+	actions, ok := c.Config.Mumble.Hooks[name]
+	if !ok {
+		return ""
+	}
+
+	command, ok := actions[subject]
+	if !ok {
+		command, ok = actions[defaultSubject]
+		if !ok {
+			return ""
+		}
+	}
+
+	return c.HandleCommand(command)
 }
 
 // SendSticker sends a sticker to a either Matrix or Telegram.

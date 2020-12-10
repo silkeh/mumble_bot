@@ -1,4 +1,4 @@
-package main
+package bot
 
 import (
 	"bytes"
@@ -9,37 +9,24 @@ import (
 	"strings"
 
 	"github.com/justinian/dice"
-	"github.com/silkeh/mumble_bot/bot"
 )
 
-// commandPrefix contains the prefix for all commands.
-var commandPrefix = "!"
-
-// soundExtension contains the filename extension for all sound files.
-var soundExtensions = []string{".raw", ".opus"}
-
 // CommandHandler is the function signature for a command handler.
-type CommandHandler func(c *bot.Client, cmd string, args ...string) (resp string)
+type CommandHandler func(c *Client, cmd string, args ...string) (resp string)
+
+// soundExtensions contains the filename extension for all sound files.
+const soundExtension = ".opus"
 
 // commandHandlers contains handlers for given commands.
-var commandHandlers = map[string]CommandHandler{
-	"!hold":     commandHold,
-	"!play":     commandClip,
-	"!volume":   commandSetVolume,
-	"!volume--": commandDecreaseVolume,
-	"!volume++": commandIncreaseVolume,
-	"!stop":     commandStopAudio,
-	"!sticker":  commandSendSticker,
-	"!roll":     commandDiceRoll,
-}
-
-func handleCommand(c *bot.Client, s string) string {
-	cmd, args := parseCommand(s)
-	if f, ok := commandHandlers[cmd]; ok {
-		return f(c, cmd, args...)
-	}
-
-	return commandDefault(c, cmd, args...)
+var defaultCommands = map[string]CommandHandler{
+	"hold":     CommandHold,
+	"play":     CommandClip,
+	"volume":   CommandSetVolume,
+	"volume--": CommandDecreaseVolume,
+	"volume++": CommandIncreaseVolume,
+	"stop":     CommandStopAudio,
+	"sticker":  CommandSendSticker,
+	"roll":     CommandDiceRoll,
 }
 
 var templates *template.Template
@@ -63,72 +50,67 @@ func init() {
 	templates = template.Must(template.New("sound").Parse(soundUsage))
 }
 
-func commandHold(c *bot.Client, cmd string, args ...string) (resp string) {
+// CommandHold plays a given sound file in a loop (like hold music).
+func CommandHold(c *Client, cmd string, args ...string) (resp string) {
 	if len(args) < 1 {
 		return renderSoundUsage(cmd, c.Config.Mumble.Sounds.Hold)
 	}
 
-	file, err := findFile(
-		path.Join(c.Config.Mumble.Sounds.Clips, strings.Join(args, " ")),
-		soundExtensions...)
-	if err != nil {
-		return err.Error()
-	}
-
-	if err := c.PlayHold(file); err != nil {
+	file := path.Join(c.Config.Mumble.Sounds.Clips, strings.Join(args, " "))
+	if err := c.PlayHold(file + soundExtension); err != nil {
 		return fmt.Sprintf("Error playing hold music %q: %s", args[0], err)
 	}
 	return
 }
 
-func commandClip(c *bot.Client, cmd string, args ...string) (resp string) {
+// CommandClip plays a sound file once.
+func CommandClip(c *Client, cmd string, args ...string) (resp string) {
 	if len(args) < 1 {
 		return renderSoundUsage(cmd, c.Config.Mumble.Sounds.Clips)
 	}
 
-	file, err := findFile(
-		path.Join(c.Config.Mumble.Sounds.Clips, strings.Join(args, " ")),
-		soundExtensions...)
-	if err != nil {
-		return err.Error()
-	}
-
-	if err := c.PlaySound(file); err != nil {
+	file := path.Join(c.Config.Mumble.Sounds.Clips, strings.Join(args, " "))
+	if err := c.PlaySound(file + soundExtension); err != nil {
 		return fmt.Sprintf("Error playing music clip %q: %s", args[0], err)
 	}
 	return
 }
 
-func commandSetVolume(c *bot.Client, cmd string, args ...string) (resp string) {
+// CommandSetVolume sets the volume of the bot to a given value.
+func CommandSetVolume(c *Client, cmd string, args ...string) (resp string) {
 	if len(args) != 1 {
-		return fmt.Sprintf("Volume is %v/%v", c.Volume(), bot.MaxVolume)
+		return fmt.Sprintf("Volume is %v/%v", c.Volume(), MaxVolume)
 	}
 
 	v, err := strconv.ParseUint(args[0], 10, 8)
-	if err != nil || v > bot.MaxVolume || v < bot.MinVolume {
-		return fmt.Sprintf("Usage: %s %v-%v", cmd, bot.MinVolume, bot.MaxVolume)
+	if err != nil || v > MaxVolume || v < MinVolume {
+		return fmt.Sprintf("Usage: %s %v-%v", cmd, MinVolume, MaxVolume)
 	}
 
 	c.SetVolume(uint8(v % 256))
 	return fmt.Sprintf("Volume set to %v", c.Volume())
 }
 
-func commandDecreaseVolume(c *bot.Client, cmd string, args ...string) (resp string) {
+// CommandDecreaseVolume decreases the volume by one step.
+func CommandDecreaseVolume(c *Client, cmd string, args ...string) (resp string) {
 	c.ChangeVolume(-1)
 	return fmt.Sprintf("Volume set to %v", c.Volume())
 }
 
-func commandIncreaseVolume(c *bot.Client, cmd string, args ...string) (resp string) {
+// CommandIncreaseVolume increases the volume by one step.
+func CommandIncreaseVolume(c *Client, cmd string, args ...string) (resp string) {
 	c.ChangeVolume(1)
 	return fmt.Sprintf("Volume set to %v", c.Volume())
 }
 
-func commandStopAudio(c *bot.Client, cmd string, args ...string) (resp string) {
+// CommandStopAudio stops any playing audio.
+func CommandStopAudio(c *Client, cmd string, args ...string) (resp string) {
 	c.Mumble.StopAudio()
 	return
 }
 
-func commandSendSticker(c *bot.Client, cmd string, args ...string) (resp string) {
+// CommandSendSticker sends a sticker to a linked chat platform.
+func CommandSendSticker(c *Client, cmd string, args ...string) (resp string) {
 	if len(args) != 1 {
 		return fmt.Sprintf("Usage: %s <sticker>", cmd)
 	}
@@ -140,22 +122,20 @@ func commandSendSticker(c *bot.Client, cmd string, args ...string) (resp string)
 	return
 }
 
-func commandDefault(c *bot.Client, cmd string, args ...string) (resp string) {
-	// Ignore non-commands
-	if !strings.HasPrefix(cmd, commandPrefix) {
-		return ""
-	}
-
+func commandDefault(c *Client, cmd string, args ...string) (resp string) {
 	// Resolve any configured aliases
-	if alias, ok := c.Config.Mumble.Alias[cmd[len(commandPrefix):]]; ok {
-		return handleCommand(c, commandPrefix+alias)
+	if alias, ok := c.Config.Mumble.Alias[cmd]; ok {
+		if len(args) > 0 {
+			alias += " " + strings.Join(args, " ")
+		}
+		return c.HandleCommand(alias)
 	}
 
 	return fmt.Sprintf("Unknown command: %s", cmd)
 }
 
 func renderSoundUsage(command, path string) string {
-	files, err := listFiles(path, soundExtensions...)
+	files, err := listFiles(path, soundExtension)
 	if err != nil {
 		return err.Error()
 	}
@@ -179,7 +159,9 @@ func renderTemplate(name string, data interface{}) (string, error) {
 	return buf.String(), err
 }
 
-func commandDiceRoll(c *bot.Client, cmd string, args ...string) (resp string) {
+// CommandDiceRoll rolls a (set of) dice and prints the result.
+// See https://github.com/justinian/dice for features and syntax.
+func CommandDiceRoll(c *Client, cmd string, args ...string) (resp string) {
 	if len(args) != 1 {
 		return fmt.Sprintf("Usage: %s &lt;description&gt;<br/>Example: %s 4d20", cmd, cmd)
 	}
@@ -213,12 +195,4 @@ func commandDiceRoll(c *bot.Client, cmd string, args ...string) (resp string) {
 	}
 
 	return
-}
-
-func intJoin(elems []int, sep string) string {
-	strs := make([]string, len(elems))
-	for i, v := range elems {
-		strs[i] = fmt.Sprintf("%v", v)
-	}
-	return strings.Join(strs, sep)
 }
