@@ -14,8 +14,8 @@ import (
 // CommandHandler is the function signature for a command handler.
 type CommandHandler func(c *Client, cmd string, args ...string) (resp string)
 
-// soundExtensions contains the filename extension for all sound files.
-const soundExtension = ".opus"
+// SoundExtension contains the filename extension for all sound files.
+const SoundExtension = ".opus"
 
 // commandHandlers contains handlers for given commands.
 var defaultCommands = map[string]CommandHandler{
@@ -57,7 +57,7 @@ func CommandHold(c *Client, cmd string, args ...string) (resp string) {
 	}
 
 	file := path.Join(c.Config.Mumble.Sounds.Clips, strings.Join(args, " "))
-	if err := c.PlayHold(file + soundExtension); err != nil {
+	if err := c.PlayHold(file + SoundExtension); err != nil {
 		return fmt.Sprintf("Error playing hold music %q: %s", args[0], err)
 	}
 	return
@@ -70,7 +70,7 @@ func CommandClip(c *Client, cmd string, args ...string) (resp string) {
 	}
 
 	file := path.Join(c.Config.Mumble.Sounds.Clips, strings.Join(args, " "))
-	if err := c.PlaySound(file + soundExtension); err != nil {
+	if err := c.PlaySound(file + SoundExtension); err != nil {
 		return fmt.Sprintf("Error playing music clip %q: %s", args[0], err)
 	}
 	return
@@ -135,7 +135,7 @@ func commandDefault(c *Client, cmd string, args ...string) (resp string) {
 }
 
 func renderSoundUsage(command, path string) string {
-	files, err := listFiles(path, soundExtension)
+	files, err := listFiles(path, SoundExtension)
 	if err != nil {
 		return err.Error()
 	}

@@ -35,11 +35,17 @@ type MatrixConfig struct {
 	Stickers                  map[string]*matrix.Sticker
 }
 
+// APIConfig represents the API configuration.
+type APIConfig struct {
+	Address string
+}
+
 // Config represents configuration for a Client.
 type Config struct {
 	Mumble   *MumbleConfig
 	Matrix   *MatrixConfig
 	Telegram *TelegramConfig
+	API      *APIConfig
 }
 
 // LoadConfig loads a YAML configuration file.
