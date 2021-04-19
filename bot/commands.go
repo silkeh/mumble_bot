@@ -56,11 +56,12 @@ func CommandHold(c *Client, cmd string, args ...string) (resp string) {
 		return renderSoundUsage(cmd, c.Config.Mumble.Sounds.Hold)
 	}
 
-	file := path.Join(c.Config.Mumble.Sounds.Clips, strings.Join(args, " "))
+	name := strings.Join(args, " ")
+	file := path.Join(c.Config.Mumble.Sounds.Clips, name)
 	if err := c.PlayHold(file + SoundExtension); err != nil {
 		return fmt.Sprintf("Error playing hold music %q: %s", args[0], err)
 	}
-	return
+	return fmt.Sprintf("Please hold. Now playing %q...", name)
 }
 
 // CommandClip plays a sound file once.
@@ -69,11 +70,12 @@ func CommandClip(c *Client, cmd string, args ...string) (resp string) {
 		return renderSoundUsage(cmd, c.Config.Mumble.Sounds.Clips)
 	}
 
-	file := path.Join(c.Config.Mumble.Sounds.Clips, strings.Join(args, " "))
+	name := strings.Join(args, " ")
+	file := path.Join(c.Config.Mumble.Sounds.Clips, name)
 	if err := c.PlaySound(file + SoundExtension); err != nil {
-		return fmt.Sprintf("Error playing music clip %q: %s", args[0], err)
+		return fmt.Sprintf("Error playing music clip %q: %s", name, err)
 	}
-	return
+	return fmt.Sprintf("Now playing %q...", name)
 }
 
 // CommandSetVolume sets the volume of the bot to a given value.
@@ -171,9 +173,10 @@ func CommandDiceRoll(c *Client, cmd string, args ...string) (resp string) {
 		return fmt.Sprintf("Error: %s", err)
 	}
 
+	resp = fmt.Sprintf("Rolled %s: ", args[0])
 	switch r := result.(type) {
 	case dice.StdResult:
-		resp = fmt.Sprintf("%v", r.Total)
+		resp += fmt.Sprintf("%v", r.Total)
 		if len(r.Rolls) > 1 {
 			resp += fmt.Sprintf(" (%s)", intJoin(r.Rolls, "+"))
 		}
@@ -181,17 +184,17 @@ func CommandDiceRoll(c *Client, cmd string, args ...string) (resp string) {
 			resp += fmt.Sprintf(" (dropped %s)", intJoin(r.Dropped, ", "))
 		}
 	case dice.FudgeResult:
-		resp = fmt.Sprintf("%v", r.Total)
+		resp += fmt.Sprintf("%v", r.Total)
 		if len(r.Rolls) > 1 {
 			resp += fmt.Sprintf(" (%s)", intJoin(r.Rolls, "+"))
 		}
 	case dice.VsResult:
-		resp = fmt.Sprintf("successes: %v", r.Successes)
+		resp += fmt.Sprintf("successes: %v", r.Successes)
 		if len(r.Rolls) > 1 {
 			resp += fmt.Sprintf(" (%s)", intJoin(r.Rolls, ", "))
 		}
 	default:
-		resp = result.String()
+		resp += result.String()
 	}
 
 	return
