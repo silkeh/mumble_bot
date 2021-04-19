@@ -29,6 +29,9 @@ const (
 
 	// MaxVolume represents the maximum volume that can be set.
 	MaxVolume = 16
+
+	// DefaultVolume represents the default volume.
+	DefaultVolume = 14
 )
 
 const (
@@ -42,7 +45,7 @@ const (
 // NewClient initializes the client with a given config.
 // Either Matrix or Telegram may be configured, not both at the same time.
 func NewClient(config *Config) (c *Client, err error) {
-	c = &Client{Config: config, volume: 15, commands: defaultCommands}
+	c = &Client{Config: config, volume: DefaultVolume, commands: defaultCommands}
 
 	// Check if Matrix and Telegram aren't enabled at the same time.
 	if config.Telegram != nil && config.Matrix != nil {
