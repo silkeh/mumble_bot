@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/silkeh/mumble_bot/api"
 	"github.com/silkeh/mumble_bot/bot"
 )
 
@@ -44,6 +45,13 @@ func main() {
 	}
 	defer client.Stop()
 	go handleSignals(client, configFile)
+
+	if config.API != nil {
+		log.Printf("API listening on %q", config.API.Address)
+		go func() {
+			log.Fatal(api.NewAPI(client, nil).ListenAndServe(config.API.Address))
+		}()
+	}
 
 	log.Printf("Waiting for events...")
 	log.Fatal(client.Run())
