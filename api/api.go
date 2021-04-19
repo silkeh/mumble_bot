@@ -26,6 +26,7 @@ func NewAPI(c *bot.Client, mux *http.ServeMux) *API {
 	mux.HandleFunc("/api/v1/hold", api.handleHold)
 	mux.HandleFunc("/api/v1/stickers", api.handleStickers)
 	mux.HandleFunc("/api/v1/aliases", api.handleAliases)
+	mux.HandleFunc("/api/v1/volume", api.handleVolume)
 
 	return api
 }
