@@ -20,8 +20,8 @@ type UDPStats struct {
 
 type Stats struct {
 	Connected int64
-	Ping PingStats
-	UDP UDPStats
+	Ping      PingStats
+	UDP       UDPStats
 }
 
 type User struct {
