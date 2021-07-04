@@ -20,6 +20,7 @@ func NewAPI(c *bot.Client, mux *http.ServeMux) *API {
 		mux:    mux,
 	}
 
+	mux.HandleFunc("/metrics", api.handleMetrics)
 	mux.HandleFunc("/api/v1/users", api.handleUsers)
 	mux.HandleFunc("/api/v1/command", api.handleCommand)
 	mux.HandleFunc("/api/v1/clips", api.handleClips)
