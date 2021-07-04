@@ -6,7 +6,7 @@ import (
 )
 
 func writeMetric(w http.ResponseWriter, id int, u *User, name string, v interface{}) (int, error) {
-	return fmt.Fprintf(w, `mumble_`+name+`{id="%v",name="%s"} %v`, id, u.Name, v)
+	return fmt.Fprintf(w, `mumble_`+name+`{id="%v",name="%s"} %v`+"\n", id, u.Name, v)
 }
 
 func (api *API) handleMetrics(w http.ResponseWriter, req *http.Request) {
@@ -17,7 +17,7 @@ func (api *API) handleMetrics(w http.ResponseWriter, req *http.Request) {
 
 	fmt.Fprintf(w, "mumble_connected_users %v", len(api.client.Mumble.Users))
 	for i, u := range api.getUsers() {
-		writeMetric(w, i, u, "stats_connected_time_seconds", u.Stats.Connected)
+		writeMetric(w, i, u, "stats_connection_time_seconds", u.Stats.Connected)
 		writeMetric(w, i, u, "stats_ping_tcp_count", u.Stats.Ping.TCP.Packets)
 		writeMetric(w, i, u, "stats_ping_tcp_avg_ms", u.Stats.Ping.TCP.Average)
 		writeMetric(w, i, u, "stats_ping_tcp_var_ms", u.Stats.Ping.TCP.Variance)
