@@ -15,7 +15,7 @@ func (api *API) handleMetrics(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, "mumble_connected_users %v", len(api.client.Mumble.Users))
+	fmt.Fprintf(w, "mumble_connected_users %v\n", len(api.client.Mumble.Users))
 	for i, u := range api.getUsers() {
 		writeMetric(w, i, u, "stats_connection_time_seconds", u.Stats.Connected)
 		writeMetric(w, i, u, "stats_ping_tcp_count", u.Stats.Ping.TCP.Packets)
