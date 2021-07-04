@@ -2,15 +2,26 @@ package api
 
 import "layeh.com/gumble/gumble"
 
-type Stat struct {
-	Packets      uint32
-	PingAverage  float32
-	PingVariance float32
+type PingStats struct {
+	UDP PingStat
+	TCP PingStat
+}
+
+type PingStat struct {
+	Packets  uint32
+	Average  float32
+	Variance float32
+}
+
+type UDPStats struct {
+	Client gumble.UserStatsUDP
+	Server gumble.UserStatsUDP
 }
 
 type Stats struct {
-	UDP Stat
-	TCP Stat
+	Connected int64
+	Ping PingStats
+	UDP UDPStats
 }
 
 type User struct {
@@ -42,15 +53,22 @@ func NewUser(user *gumble.User) *User {
 	}
 	if user.Stats != nil {
 		u.Stats = &Stats{
-			UDP: Stat{
-				Packets:      user.Stats.UDPPackets,
-				PingAverage:  user.Stats.UDPPingAverage,
-				PingVariance: user.Stats.UDPPingVariance,
+			Connected: user.Stats.Connected.Unix(),
+			Ping: PingStats{
+				UDP: PingStat{
+					Packets:  user.Stats.UDPPackets,
+					Average:  user.Stats.UDPPingAverage,
+					Variance: user.Stats.UDPPingVariance,
+				},
+				TCP: PingStat{
+					Packets:  user.Stats.TCPPackets,
+					Average:  user.Stats.TCPPingAverage,
+					Variance: user.Stats.TCPPingVariance,
+				},
 			},
-			TCP: Stat{
-				Packets:      user.Stats.TCPPackets,
-				PingAverage:  user.Stats.TCPPingAverage,
-				PingVariance: user.Stats.TCPPingVariance,
+			UDP: UDPStats{
+				Client: user.Stats.FromClient,
+				Server: user.Stats.FromServer,
 			},
 		}
 	}
