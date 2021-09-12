@@ -3,6 +3,7 @@ package bot
 import (
 	"fmt"
 	"io"
+	"math"
 	"strings"
 	"sync"
 
@@ -20,18 +21,18 @@ type Client struct {
 	Matrix   *matrix.Client
 	Telegram *telegram.Client
 	commands map[string]CommandHandler
-	volume   uint8
+	volume   int8
 }
 
 const (
-	// MinVolume represents the minimum volume that can be set.
-	MinVolume = 0
+	// MinVolume represents the minimum gain in dB that can be set.
+	MinVolume = -90
 
-	// MaxVolume represents the maximum volume that can be set.
-	MaxVolume = 16
+	// MaxVolume represents the maximum gain in dB that can be set.
+	MaxVolume = 30
 
 	// DefaultVolume represents the default volume.
-	DefaultVolume = 14
+	DefaultVolume = -18
 )
 
 const (
@@ -172,7 +173,7 @@ func (c *Client) SendSticker(name string) error {
 }
 
 // SetVolume sets the volume of any Mumble audio played.
-func (c *Client) SetVolume(n uint8) {
+func (c *Client) SetVolume(n int8) {
 	c.Lock()
 	defer c.Unlock()
 	c.volume = bound8(n, MinVolume, MaxVolume)
@@ -182,14 +183,21 @@ func (c *Client) SetVolume(n uint8) {
 func (c *Client) ChangeVolume(n int8) {
 	c.Lock()
 	defer c.Unlock()
-	c.volume = bound8(uint8(int8(c.volume)+n), MinVolume, MaxVolume)
+	c.volume = bound8(c.volume+n, MinVolume, MaxVolume)
 }
 
-// Volume returns the current volume level.
-func (c *Client) Volume() uint8 {
+// Volume returns the current volume gain in dB.
+func (c *Client) Volume() int8 {
 	c.Lock()
 	defer c.Unlock()
 	return c.volume
+}
+
+// Gain returns the current volume amplitude ratio.
+func (c *Client) gain() float64 {
+	c.Lock()
+	defer c.Unlock()
+	return math.Pow(10, float64(c.volume)/20)
 }
 
 // PlayHold plays hold music from a raw 16-bit 48k PCM file in a loop until Mumble.StopAudio() is called.
@@ -226,7 +234,7 @@ func (c *Client) playRaw(ch chan<- int16, stream AudioStream) {
 	buf := make([]int16, c.Mumble.Config.AudioFrameSize())
 	for i := 0; true; i++ {
 		// Do the slow updates every stream
-		volume := MaxVolume - c.Volume()
+		volume := c.gain()
 		if c.Mumble.AudioStopped() {
 			break
 		}
@@ -239,7 +247,7 @@ func (c *Client) playRaw(ch chan<- int16, stream AudioStream) {
 
 		// Stream the audio
 		for _, sample := range buf[:n] {
-			ch <- sample >> volume
+			ch <- int16(float64(sample) * volume)
 		}
 
 		// Stop if the file/stream has ended
@@ -255,7 +263,7 @@ func (c *Client) Stop() {
 	c.Mumble.Disconnect()
 }
 
-func bound8(v, min, max uint8) uint8 {
+func bound8(v, min, max int8) int8 {
 	if v >= max {
 		return max
 	}

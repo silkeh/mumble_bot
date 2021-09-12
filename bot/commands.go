@@ -81,28 +81,28 @@ func CommandClip(c *Client, cmd string, args ...string) (resp string) {
 // CommandSetVolume sets the volume of the bot to a given value.
 func CommandSetVolume(c *Client, cmd string, args ...string) (resp string) {
 	if len(args) != 1 {
-		return fmt.Sprintf("Volume is %v/%v", c.Volume(), MaxVolume)
+		return fmt.Sprintf("Volume is %+v dB (max %+v dB)", c.Volume(), MaxVolume)
 	}
 
-	v, err := strconv.ParseUint(args[0], 10, 8)
+	v, err := strconv.ParseInt(args[0], 10, 8)
 	if err != nil || v > MaxVolume || v < MinVolume {
-		return fmt.Sprintf("Usage: %s %v-%v", cmd, MinVolume, MaxVolume)
+		return fmt.Sprintf("Usage: %s %v-%v (in dB)", cmd, MinVolume, MaxVolume)
 	}
 
-	c.SetVolume(uint8(v % 256))
-	return fmt.Sprintf("Volume set to %v", c.Volume())
+	c.SetVolume(int8(v % 256))
+	return fmt.Sprintf("Volume set to %+v dB", c.Volume())
 }
 
 // CommandDecreaseVolume decreases the volume by one step.
 func CommandDecreaseVolume(c *Client, cmd string, args ...string) (resp string) {
-	c.ChangeVolume(-1)
-	return fmt.Sprintf("Volume set to %v", c.Volume())
+	c.ChangeVolume(-3)
+	return fmt.Sprintf("Volume set to %+v dB", c.Volume())
 }
 
 // CommandIncreaseVolume increases the volume by one step.
 func CommandIncreaseVolume(c *Client, cmd string, args ...string) (resp string) {
-	c.ChangeVolume(1)
-	return fmt.Sprintf("Volume set to %v", c.Volume())
+	c.ChangeVolume(3)
+	return fmt.Sprintf("Volume set to %+v dB", c.Volume())
 }
 
 // CommandStopAudio stops any playing audio.
