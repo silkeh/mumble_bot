@@ -11,6 +11,9 @@ mumble:
   sounds:
     hold: ./sounds
     clips: ./sounds
+# Uncomment to enable execution of scripts
+#  scripts:
+#    directory: ./scripts
 
 telegram:
   token: "<secret>"

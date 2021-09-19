@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"os/exec"
 	"path"
 	"strconv"
 	"strings"
@@ -27,6 +28,7 @@ var defaultCommands = map[string]CommandHandler{
 	"stop":     CommandStopAudio,
 	"sticker":  CommandSendSticker,
 	"roll":     CommandDiceRoll,
+	"shell":    CommandShell,
 }
 
 var templates *template.Template
@@ -198,4 +200,33 @@ func CommandDiceRoll(c *Client, cmd string, args ...string) (resp string) {
 	}
 
 	return
+}
+
+// CommandShell executes a shell script in the configured script directory
+func CommandShell(c *Client, cmd string, args ...string) (resp string) {
+	if c.Config.Mumble.Script.Directory == "" {
+		return fmt.Sprintf("%q command is not enabled", cmd)
+	}
+
+	if len(args) == 0 {
+		return fmt.Sprintf("Usage: %s &lt;scripts&gt; [arguments...]", cmd)
+	}
+
+	cmd = args[0]
+	args = args[1:]
+	if strings.Contains(cmd, `/`) || strings.Contains(cmd, `\`) {
+		return fmt.Sprintf("Invalid command: %q", cmd)
+	}
+
+	cmd = path.Join(c.Config.Mumble.Script.Directory, cmd)
+	out := new(bytes.Buffer)
+	exe := exec.Command(cmd, args...)
+	exe.Stdout = out
+	exe.Stderr = out
+
+	if err := exe.Run(); err != nil {
+		return fmt.Sprintf("Error: %s<br/><pre>%s</pre>", err, out.String())
+	}
+
+	return out.String()
 }

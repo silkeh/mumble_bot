@@ -21,6 +21,9 @@ type MumbleConfig struct {
 		Hold  string
 		Clips string
 	}
+	Script        struct {
+		Directory string
+	}
 }
 
 // TelegramConfig represents configuration for a Telegram client.
