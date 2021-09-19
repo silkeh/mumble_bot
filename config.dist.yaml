@@ -12,7 +12,7 @@ mumble:
     hold: ./sounds
     clips: ./sounds
 # Uncomment to enable execution of scripts
-#  scripts:
+#  script:
 #    directory: ./scripts
 
 telegram:
