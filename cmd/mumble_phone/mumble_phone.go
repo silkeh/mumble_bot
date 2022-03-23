@@ -72,6 +72,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error creating client: %s", err)
 	}
+	defer client.Client.Disconnect()
 
 	atFile, err := os.Open(atDevice)
 	if err != nil {
@@ -105,7 +106,7 @@ func main() {
 			log.Println("Picking up phone")
 
 			for _, cmd := range atCommands {
-				atFile.WriteString(cmd)
+				atFile.WriteString(cmd + "\r\n")
 			}
 
 			go client.StreamAudio(outChan)
