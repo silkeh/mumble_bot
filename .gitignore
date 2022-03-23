@@ -1,6 +1,8 @@
 # Binaries for programs and plugins
 /mumble_bot
+/mumble_phone
 cmd/mumble_bot/mumble_bot
+cmd/mumble_phone/mumble_phone
 *.exe
 *.exe~
 *.dll
