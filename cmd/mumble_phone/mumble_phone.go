@@ -81,8 +81,6 @@ func main() {
 	var mumbleServer, mumbleUser, atDevice, audioDevice string
 	var rings, ringMax int
 
-	log.Printf("%#v", rings)
-
 	flag.StringVar(&mumbleServer, "server", "chat.slxh.eu:64738", "Mumble server")
 	flag.StringVar(&mumbleUser, "user", "PhoneBot", "Mumble username")
 	flag.StringVar(&atDevice, "modem", "/dev/ttyUSB3", "AT modem")
