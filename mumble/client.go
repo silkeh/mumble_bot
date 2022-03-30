@@ -16,7 +16,6 @@ type Client struct {
 	*gumble.Client
 	Messages      chan *gumble.TextMessage
 	UserChanges   chan *gumble.UserChangeEvent
-	Audio         *AudioListener
 	audioOut      sync.Mutex
 	audioMuted    bool
 	audioDeafened bool
@@ -26,21 +25,23 @@ type Client struct {
 }
 
 // NewClient initialises and returns a Mumble Client.
-func NewClient(server, user string) (c *Client, err error) {
+func NewClient(server, user string, l gumble.AudioListener) (c *Client, err error) {
 	c = &Client{
 		Messages:    make(chan *gumble.TextMessage),
 		UserChanges: make(chan *gumble.UserChangeEvent),
-		Audio:       new(AudioListener),
 	}
 
 	// Client configuration
 	config := gumble.NewConfig()
 	config.Username = user
-	config.AttachAudio(c.Audio)
 	config.Attach(gumbleutil.Listener{
 		UserChange:  c.changeHandler,
 		TextMessage: c.textMessageHandler,
 	})
+
+	if l != nil {
+		config.AttachAudio(l)
+	}
 
 	// Create connection
 	c.Client, err = gumble.Dial(server, config)
